@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+enum Role {
+  CUSTOMER
+  WRITER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAYMENT
+  ASSIGNING
+  WRITING
+  REVIEWING
+  COMPLETED
+  REVISION
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum RevisionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+// ===== MODELS =====
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String?
+  lastName      String?
+  role          Role      @default(CUSTOMER)
+  avatar        String?
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  orders        Order[]
+  reviews       Review[]
+  writerProfile WriterProfile?
+  bids          Bid[]
+  essays        Essay[]
+  revisions     Revision[]
+}
+
+model WriterProfile {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specializations   String[]  @default([])
+  educationLevel    String
+  experienceYears   Int       @default(0)
+  rating            Float     @default(0)
+  completedOrders   Int       @default(0)
+  bio               String?
+  isAvailable       Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  orderNumber       String        @unique @default(uuid())
+  customerId        String
+  customer          User          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Order details
+  paperType         String
+  topic             String
+  academicLevel     String
+  wordCount         Int
+  pages             Int
+  citationStyle     String
+
+  // Deadline & pricing
+  deadline          DateTime
+  totalPrice        Float
+  discountCode      String?
+  discountPercent   Float         @default(0)
+  finalPrice        Float
+  status            OrderStatus   @default(PENDING)
+
+  // Additional requirements
+  instructions      String
+  attachments       String[]      @default([])
+  preferences       Json          @default("{}")
+
+  // Payment
+  paymentIntentId   String?
+  paymentStatus     PaymentStatus @default(PENDING)
+
+  // Writer assignment
+  writerId          String?
+  writer            User?         @relation(fields: [writerId], references: [id])
+
+  // Deliverables
+  submittedEssayId  String?
+  submittedEssay    Essay?
+
+  // Timestamps
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  reviews           Review[]
+  revisions         Revision[]
+  bids              Bid[]
+
+  @@index([customerId])
+  @@index([writerId])
+  @@index([status])
+}
+
+model Bid {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  writerId  String
+  writer    User     @relation(fields: [writerId], references: [id], onDelete: Cascade)
+  price     Float
+  message   String?
+  isAccepted Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([writerId])
+}
+
+model Essay {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  writerId    String
+  writer      User     @relation(fields: [writerId], references: [id], onDelete: Cascade)
+  content     String
+  fileName    String
+  fileUrl     String
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([writerId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customerId String
+  customer  User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([customerId])
+}
+
+model Revision {
+  id          String           @id @default(uuid())
+  orderId     String
+  order       Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    User             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  requestText String
+  status      RevisionStatus   @default(PENDING)
+  createdAt   DateTime         @default(now())
+  completedAt DateTime?
+
+  @@index([orderId])
+  @@index([customerId])
+}
