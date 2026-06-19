@@ -42,12 +42,30 @@ export const CreateOrderSchema = z.object({
   topic: z.string().min(10, 'Topic must be at least 10 characters'),
   academicLevel: z.string().min(1, 'Please select academic level'),
   wordCount: z.number().min(100, 'Minimum 100 words').max(100000, 'Maximum 100,000 words'),
-  pages: z.number().min(1, 'Minimum 1 page').max(400, 'Maximum 400 pages'),
+  pages: z.number().min(1).max(400),
   citationStyle: z.string().min(1, 'Please select citation style'),
   deadline: z.date().min(new Date(), 'Deadline must be in the future'),
   instructions: z.string().min(20, 'Instructions must be at least 20 characters'),
   attachments: z.array(z.string()).optional(),
-  preferences: z.object({}).optional(),
+  preferences: z.object({
+    bestWriter: z.boolean().optional(),
+    premiumWriter: z.boolean().optional(),
+    top10: z.boolean().optional(),
+    draftRequest: z.boolean().optional(),
+    proofreading: z.boolean().optional(),
+    originalityReport: z.boolean().optional(),
+    urgentAssignment: z.boolean().optional(),
+  }).optional(),
+  pricing: z.object({
+    basePrice: z.number(),
+    writerMultiplier: z.number(),
+    urgencyMultiplier: z.number(),
+    additionalServices: z.number(),
+    subtotal: z.number(),
+    discountPercent: z.number(),
+    discountAmount: z.number(),
+    totalPrice: z.number(),
+  }).optional(),
 });
 
 export type SignUpInput = z.infer<typeof SignUpSchema>;
